@@ -1,1 +1,0 @@
-export default function App(){return <div style={{padding:'20px'}}><h1>FoodMind AI</h1><p>Deployment test build.</p></div>}
