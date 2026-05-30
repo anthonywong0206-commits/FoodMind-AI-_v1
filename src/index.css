@@ -32,5 +32,5 @@ button, input, select { font: inherit; }
 .disabled\:cursor-not-allowed:disabled{cursor:not-allowed}.disabled\:opacity-60:disabled{opacity:.6}.animate-spin{animation:spin 1s linear infinite}.cursor-not-allowed{cursor:not-allowed}
 @keyframes spin{to{transform:rotate(360deg)}}
 .grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}.grid-cols-4{grid-template-columns:repeat(4,minmax(0,1fr))}
-@media (min-width:768px){.md\:block{display:block}.md\:grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}.md\:grid-cols-4{grid-template-columns:repeat(4,minmax(0,1fr))}.md\:px-8{padding-left:2rem;padding-right:2rem}.md\:p-8{padding:2rem}.md\:h-96{height:24rem}.md\:text-5xl{font-size:3rem}}
+@media (min-width:768px){.md\:flex{display:flex}.md\:block{display:block}.md\:grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}.md\:grid-cols-4{grid-template-columns:repeat(4,minmax(0,1fr))}.md\:px-8{padding-left:2rem;padding-right:2rem}.md\:p-8{padding:2rem}.md\:h-96{height:24rem}.md\:text-5xl{font-size:3rem}}
 @media (min-width:1024px){.lg\:grid-cols-\[1\.1fr_\.9fr\]{grid-template-columns:1.1fr .9fr}.lg\:grid-cols-\[1fr_\.8fr\]{grid-template-columns:1fr .8fr}.lg\:grid-cols-\[\.8fr_1\.2fr\]{grid-template-columns:.8fr 1.2fr}.lg\:grid-cols-\[\.9fr_1\.1fr\]{grid-template-columns:.9fr 1.1fr}}

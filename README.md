@@ -1,6 +1,22 @@
-# FoodMind AI
+# FoodMind AI v2｜後端 API 安全版
 
-AI 智能食物決策助手，可部署到 Vercel / GitHub Pages。
+這個版本已經取消前端 API Key 輸入，改為 Vercel Serverless API。
+
+## 專案結構
+
+```text
+api/
+  food.js
+  image.js
+  vision.js
+src/
+  App.jsx
+  main.jsx
+  index.css
+package.json
+vite.config.js
+index.html
+```
 
 ## 本機測試
 
@@ -9,23 +25,58 @@ npm install
 npm run dev
 ```
 
-## Vercel 部署
+本機 Vite 測試不會自動執行 Vercel `/api` serverless functions。  
+建議部署到 Vercel 測試正式 AI 功能。
+
+## Vercel 部署設定
+
+Framework Preset:
+
+```text
+Vite
+```
 
 Build Command:
 
-```bash
+```text
 npm run build
 ```
 
 Output Directory:
 
-```bash
+```text
 dist
 ```
 
-## 注意
+## Vercel Environment Variable
 
-預設啟用 Demo 模式，不需要 API Key 也可測試。
-如要使用 OpenAI API，請到網站「設定」頁輸入 API Key 並取消 Demo 模式。
+到：
 
-公開網站不建議把 API Key 放前端，正式版本應改用後端 API / serverless function。
+```text
+Vercel Project → Settings → Environment Variables
+```
+
+新增：
+
+```text
+Name: OPENAI_API_KEY
+Value: sk-proj-xxxxxxxxxxxxxxxx
+```
+
+注意：
+
+- Name 必須是 `OPENAI_API_KEY`
+- 不要填 `VITE_OPENAI_API_KEY`
+- 不要將 API Key 貼到 Name 欄位
+- Value 才貼你的 sk-proj API Key
+
+新增後要 Redeploy。
+
+## 使用方法
+
+1. 部署到 Vercel
+2. 設定 `OPENAI_API_KEY`
+3. Redeploy
+4. 開網站
+5. 設定頁可關閉 / 開啟 Demo 模式
+6. 關閉 Demo 模式後，AI 會使用後端 API 連 OpenAI

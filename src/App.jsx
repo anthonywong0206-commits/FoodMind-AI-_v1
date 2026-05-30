@@ -1,11 +1,11 @@
 
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   ChefHat, ShoppingBag, Home, Sparkles, Refrigerator, Settings, Camera,
   Plus, Trash2, Search, Utensils, MapPin, Clock, HeartPulse, Wand2,
   CalendarDays, Leaf, AlertTriangle, Apple, Flame, Star, Image as ImageIcon,
-  Save, KeyRound, Loader2, History, Salad, Soup, Coffee, Moon, SunMedium
+  Loader2, History, Salad, Coffee, Moon, SunMedium, ShieldCheck
 } from 'lucide-react'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, RadialBarChart,
@@ -13,22 +13,21 @@ import {
 } from 'recharts'
 
 const STORAGE_KEYS = {
-  pantry: 'foodmind_pantry_v1',
-  settings: 'foodmind_settings_v1',
-  history: 'foodmind_history_v1',
-  lastResult: 'foodmind_last_result_v1',
-  weekly: 'foodmind_weekly_v1'
+  pantry: 'foodmind_pantry_v2',
+  settings: 'foodmind_settings_v2',
+  history: 'foodmind_history_v2',
+  lastResult: 'foodmind_last_result_v2',
+  weekly: 'foodmind_weekly_v2'
 }
 
 const defaultSettings = {
-  apiKey: '',
   imageStyle: '超寫實美食攝影',
   dietPrefs: [],
   allergies: [],
   healthGoals: [],
   tastes: [],
   location: '香港',
-  useMock: true
+  useDemo: false
 }
 
 const mealOptions = [
@@ -82,87 +81,21 @@ function daysLeft(expiry) {
   return Math.ceil((exp - now) / (1000 * 60 * 60 * 24))
 }
 
-async function callOpenAI({ apiKey, messages, temperature = 0.8 }) {
-  if (!apiKey) throw new Error('未設定 OpenAI API Key')
-  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+async function postJson(url, body) {
+  const res = await fetch(url, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`
-    },
-    body: JSON.stringify({
-      model: 'gpt-4o-mini',
-      temperature,
-      messages,
-      response_format: { type: 'json_object' }
-    })
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
   })
-  if (!res.ok) {
-    const text = await res.text()
-    throw new Error(text || 'OpenAI API 連線失敗')
-  }
-  const data = await res.json()
-  return JSON.parse(data.choices?.[0]?.message?.content || '{}')
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(data.error || 'API request failed')
+  return data
 }
 
-async function callVision({ apiKey, imageBase64 }) {
-  if (!apiKey) throw new Error('未設定 OpenAI API Key')
-  const res = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`
-    },
-    body: JSON.stringify({
-      model: 'gpt-4o-mini',
-      response_format: { type: 'json_object' },
-      messages: [
-        {
-          role: 'system',
-          content: '你是食材辨識助手。請辨識圖片內可見食材，輸出 JSON：{"items":[{"name":"食材名","category":"分類","quantity":"估算數量"}]}。只輸出 JSON。'
-        },
-        {
-          role: 'user',
-          content: [
-            { type: 'text', text: '請辨識圖片中的食材。' },
-            { type: 'image_url', image_url: { url: imageBase64 } }
-          ]
-        }
-      ]
-    })
-  })
-  if (!res.ok) throw new Error(await res.text())
-  const data = await res.json()
-  return JSON.parse(data.choices?.[0]?.message?.content || '{}')
-}
-
-async function generateImage({ apiKey, prompt }) {
-  if (!apiKey) throw new Error('未設定 OpenAI API Key')
-  const res = await fetch('https://api.openai.com/v1/images/generations', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`
-    },
-    body: JSON.stringify({
-      model: 'gpt-image-1',
-      prompt,
-      size: '1024x1024'
-    })
-  })
-  if (!res.ok) throw new Error(await res.text())
-  const data = await res.json()
-  const b64 = data.data?.[0]?.b64_json
-  return b64 ? `data:image/png;base64,${b64}` : ''
-}
-
-function mockFoodResult(form, settings, pantry) {
+function mockFoodResult(form, settings) {
   const want = form.craving || '雞肉飯'
   const isDelivery = form.mode === '外賣'
-  const title = isDelivery
-    ? `${want} 招牌精選餐`
-    : `蒜香${want}健康家常版`
-  const calories = isDelivery ? 780 : 520
+  const title = isDelivery ? `${want} 招牌精選餐` : `蒜香${want}健康家常版`
   return {
     title,
     type: form.mode,
@@ -197,16 +130,14 @@ function mockFoodResult(form, settings, pantry) {
     time: isDelivery ? '約 25–40 分鐘送達' : '約 20 分鐘',
     difficulty: isDelivery ? '簡單' : '⭐⭐',
     nutrition: {
-      calories,
+      calories: isDelivery ? 780 : 520,
       protein: isDelivery ? 38 : 32,
       fat: isDelivery ? 28 : 15,
       carbs: isDelivery ? 92 : 55,
       fiber: isDelivery ? 6 : 9,
       healthScore: isDelivery ? 72 : 86
     },
-    tips: isDelivery
-      ? '建議少汁、走凍飲，配一份蔬菜或湯，整體會健康好多。'
-      : '如果屋企有即將到期食材，可以優先加入，減少浪費。'
+    tips: isDelivery ? '建議少汁、走凍飲，配一份蔬菜或湯，整體會健康好多。' : '如果屋企有即將到期食材，可以優先加入，減少浪費。'
   }
 }
 
@@ -267,32 +198,23 @@ function App() {
     setNotice('')
     try {
       let result
-      if (!settings.useMock && settings.apiKey) {
-        const pantryText = pantry.map(x => `${x.name}(${x.quantity || '適量'})`).join('、')
-        const payload = await callOpenAI({
-          apiKey: settings.apiKey,
-          messages: [
-            { role: 'system', content: '你是 FoodMind AI，請用繁體中文/香港用語，輸出 JSON。格式：{"title":"","type":"","meal":"","reason":[],"places":[{"name":"","distance":"","rating":"","price":""}],"ingredients":[{"name":"","amount":""}],"steps":[],"time":"","difficulty":"","nutrition":{"calories":0,"protein":0,"fat":0,"carbs":0,"fiber":0,"healthScore":0},"tips":"","imagePrompt":""}' },
-            { role: 'user', content: `用戶想食：${form.craving || '未指定'}；用餐：${form.meal}；方式：${form.mode}；心情：${form.mood}；食材庫：${pantryText || '沒有'}；飲食偏好：${settings.dietPrefs.join('、') || '無'}；過敏：${settings.allergies.join('、') || '無'}；健康目標：${settings.healthGoals.join('、') || '無'}；口味：${settings.tastes.join('、') || '無'}。請生成一個食物建議。外賣要有地點建議；自己煮要有食譜。` }
-          ]
-        })
-        result = { ...payload, imageUrl: demoImages[Math.floor(Math.random() * demoImages.length)] }
-        if (settings.apiKey) {
-          try {
-            const imageUrl = await generateImage({ apiKey: settings.apiKey, prompt: payload.imagePrompt || payload.title })
-            if (imageUrl) result.imageUrl = imageUrl
-          } catch {
-            result.imageUrl = demoImages[Math.floor(Math.random() * demoImages.length)]
-          }
-        }
+      if (settings.useDemo) {
+        result = mockFoodResult(form, settings)
       } else {
-        result = mockFoodResult(form, settings, pantry)
+        result = await postJson('/api/food', { form, settings, pantry })
+        try {
+          const img = await postJson('/api/image', { prompt: result.imagePrompt || result.title })
+          result.imageUrl = img.imageUrl || demoImages[Math.floor(Math.random() * demoImages.length)]
+        } catch {
+          result.imageUrl = demoImages[Math.floor(Math.random() * demoImages.length)]
+        }
       }
+
       setLastResult(result)
       setHistory([{ id: crypto.randomUUID(), date: new Date().toLocaleString(), ...result }, ...history].slice(0, 30))
       setTab('result')
     } catch (e) {
-      setNotice(`AI 生成失敗：${e.message}`)
+      setNotice(`AI 生成失敗：${e.message}。如剛部署，請檢查 Vercel 是否已設定 OPENAI_API_KEY，或先到設定開啟 Demo 模式測試。`)
     } finally {
       setLoading(false)
     }
@@ -333,8 +255,8 @@ function App() {
               <p className="text-sm text-stone-500">今日食咩？交俾 AI 幫你決定。</p>
             </div>
           </div>
-          <div className="hidden rounded-full bg-white/70 px-4 py-2 text-sm font-bold text-emerald-700 shadow-soft md:block">
-            AI 食物決策助手
+          <div className="hidden items-center gap-2 rounded-full bg-white/70 px-4 py-2 text-sm font-bold text-emerald-700 shadow-soft md:flex">
+            <ShieldCheck size={16} /> 後端 API 安全版
           </div>
         </header>
 
@@ -415,8 +337,8 @@ function App() {
                 <Card className="overflow-hidden">
                   <img className="h-56 w-full object-cover" src="https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=1200&q=80" alt="food" />
                   <div className="p-5">
-                    <h3 className="mb-2 text-xl font-black">打開就想揀嘢食</h3>
-                    <p className="text-sm text-stone-500">整合心情、食材、偏好、健康目標，幫你減少每日「食咩好」嘅選擇困難。</p>
+                    <h3 className="mb-2 text-xl font-black">安全後端 API 版</h3>
+                    <p className="text-sm text-stone-500">API Key 已改為只放 Vercel 後台，設定頁不再需要用戶輸入 Key。</p>
                   </div>
                 </Card>
                 <Card className="p-5">
@@ -624,32 +546,31 @@ function PantryPage({ pantry, setPantry, settings, setNotice, setTab, setLastRes
     const reader = new FileReader()
     reader.onload = async () => {
       try {
-        if (!settings.useMock && settings.apiKey) {
-          const data = await callVision({ apiKey: settings.apiKey, imageBase64: reader.result })
-          const items = (data.items || []).map(x => ({
-            id: crypto.randomUUID(),
-            name: x.name,
-            quantity: x.quantity || '1份',
-            category: x.category || '其他',
-            expiry: '',
-            createdAt: todayISO()
-          }))
-          setPantry([...items, ...pantry])
+        let items = []
+        if (settings.useDemo) {
+          items = ['雞蛋', '蕃茄', '洋蔥', '牛肉'].map(name => ({ name, quantity: '1份', category: 'Demo辨識' }))
         } else {
-          const demo = ['雞蛋', '蕃茄', '洋蔥', '牛肉'].map(name => ({
-            id: crypto.randomUUID(), name, quantity: '1份', category: 'AI辨識', expiry: '', createdAt: todayISO()
-          }))
-          setPantry([...demo, ...pantry])
+          const data = await postJson('/api/vision', { imageBase64: reader.result })
+          items = data.items || []
         }
+        const pantryItems = items.map(x => ({
+          id: crypto.randomUUID(),
+          name: x.name,
+          quantity: x.quantity || '1份',
+          category: x.category || '其他',
+          expiry: '',
+          createdAt: todayISO()
+        }))
+        setPantry([...pantryItems, ...pantry])
       } catch (err) {
-        setNotice(`圖片辨識失敗：${err.message}`)
+        setNotice(`圖片辨識失敗：${err.message}。如未設定 OPENAI_API_KEY，可先到設定開啟 Demo 模式。`)
       }
     }
     reader.readAsDataURL(file)
   }
 
   function generateFromPantry() {
-    const fake = mockFoodResult({ meal: '晚餐', mode: '自己煮', mood: '🏃 健康模式', craving: pantry.slice(0, 3).map(x => x.name).join('、') || '家常菜' }, settings, pantry)
+    const fake = mockFoodResult({ meal: '晚餐', mode: '自己煮', mood: '🏃 健康模式', craving: pantry.slice(0, 3).map(x => x.name).join('、') || '家常菜' }, settings)
     setLastResult(fake)
     setHistory([{ id: crypto.randomUUID(), date: new Date().toLocaleString(), ...fake }, ...history].slice(0, 30))
     setTab('result')
@@ -725,11 +646,14 @@ function SettingsPage({ settings, setSettings, history, weekly, generateWeeklyPl
           </p>
           <h2 className="mb-5 text-3xl font-black">個人化設定</h2>
 
-          <label className="mb-2 flex items-center gap-2 text-sm font-black"><KeyRound size={16} /> OpenAI API Key</label>
-          <input type="password" className="mb-2 w-full rounded-2xl border border-stone-200 px-4 py-3 outline-none focus:border-amber-500" placeholder="sk-..." value={settings.apiKey} onChange={e => setSettings({ ...settings, apiKey: e.target.value })} />
+          <div className="mb-5 rounded-3xl bg-emerald-50 p-4">
+            <div className="mb-1 flex items-center gap-2 font-black text-emerald-900"><ShieldCheck size={18} /> 後端 API 模式</div>
+            <p className="text-sm text-emerald-800">API Key 已改為放在 Vercel Environment Variables：OPENAI_API_KEY。用戶不需要在前端輸入 Key。</p>
+          </div>
+
           <label className="mb-5 flex items-center gap-2 text-sm font-bold text-stone-500">
-            <input type="checkbox" checked={settings.useMock} onChange={e => setSettings({ ...settings, useMock: e.target.checked })} />
-            使用 Demo 模式（不用 API Key，適合部署測試）
+            <input type="checkbox" checked={settings.useDemo} onChange={e => setSettings({ ...settings, useDemo: e.target.checked })} />
+            Demo 模式（不用後端 API，適合測試畫面）
           </label>
 
           <label className="mb-2 block text-sm font-black">地區 / 位置</label>
@@ -779,13 +703,6 @@ function SettingsPage({ settings, setSettings, history, weekly, generateWeeklyPl
               ))}
             </div>
           )}
-        </Card>
-
-        <Card className="p-6">
-          <h3 className="mb-2 text-xl font-black">FoodMind AI Pro 未來版本</h3>
-          <div className="grid gap-2 text-sm font-bold text-stone-600 md:grid-cols-2">
-            {['ChatGPT 語音助手','AI 營養師','AI 減肥教練','AI 買餸助手','超市價格比較','自動生成購物清單','Apple Health 同步','Google Fit 同步'].map(x => <div key={x} className="rounded-2xl bg-stone-50 p-3">✨ {x}</div>)}
-          </div>
         </Card>
       </div>
     </motion.main>
