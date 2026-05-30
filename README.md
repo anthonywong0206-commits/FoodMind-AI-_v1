@@ -1,34 +1,37 @@
-# FoodMind v6 Cat Chef Ultimate
+# FoodMind v7 Cat Chef Nutrition
 
-真正重構版：可愛貓主廚風格，保留現有功能。
+在 v6 Cat Chef Ultimate 基礎上更新：
+
+## 新增 / 修改
+- 底部「餐單」改為「營養」
+- 新增「營養管理」頁
+- 用戶可自訂健康飲食策略
+- 用戶可設定每日卡路里目標
+- 用戶可設定每日蛋白質目標
+- AI 生成一週營養餐單
+- 一週餐單顯示每日早餐 / 午餐 / 晚餐 / 小食
+- 每日顯示 calories、protein、carbs、healthScore
+- 我的頁面新增食物黑名單
+- 我的頁面新增食物白名單
+- AI 生成食物建議及一週餐單時會避開黑名單，優先考慮白名單
 
 ## 保留功能
-- 後端 OpenAI API：api/food.js
-- Vision 食材辨識：api/vision.js
-- AI 食物建議
-- 自己煮 / 外賣模式
-- 食材庫新增 / 修改 / 刪除
-- 拍照 / 上載圖片辨識食材
-- 飲食偏好、過敏、健康目標、口味設定
+- AI 貓主廚食物建議
+- 自己煮 / 外賣
+- 食材庫
+- 拍照食材辨識
+- 偏好設定
 - Demo 模式
 - Food History
-- Weekly Meal Plan
-- Smart Fridge 到期提醒
+- OpenAI 後端 API
 
-## 已移除頁面內容
-- 首頁熱門推介
-- 附近餐廳區塊
-- 圖片生成功能
+## 新增 API
+- api/mealplan.js
 
-## Vercel 設定
+## Vercel
 Environment Variable:
 
 Name: OPENAI_API_KEY
 Value: sk-proj-xxxxxxxx
 
-Build:
-Framework: Vite
-Build Command: npm run build
-Output Directory: dist
-
-更新後請 Redeploy without Build Cache。
+更新後請使用 Redeploy without Build Cache。

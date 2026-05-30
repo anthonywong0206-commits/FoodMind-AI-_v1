@@ -570,3 +570,107 @@ button { cursor: pointer; }
   .meal-grid { grid-template-columns: repeat(2, 1fr); }
   .ingredient-grid, .nutrition-grid, .pantry-grid { grid-template-columns: 1fr; }
 }
+
+
+/* v7 Nutrition Management additions */
+.cat-textarea {
+  width: 100%;
+  min-height: 120px;
+  border: 2px solid #ffe0a9;
+  border-radius: 24px;
+  background: #fffaf0;
+  color: #5b3821;
+  padding: 16px 18px;
+  outline: none;
+  margin-bottom: 10px;
+  resize: vertical;
+  font-family: inherit;
+}
+.cat-textarea:focus {
+  border-color: #ffaf45;
+  box-shadow: 0 0 0 4px rgba(255, 184, 77, .18);
+}
+.target-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.target-grid label {
+  display: block;
+  color: #8b6a4c;
+  font-weight: 900;
+  margin: 0 0 6px;
+}
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 11px;
+  margin-bottom: 12px;
+}
+.summary-grid div {
+  background: #fffaf0;
+  border: 2px solid #ffe0a9;
+  border-radius: 22px;
+  padding: 14px;
+  text-align: center;
+}
+.summary-grid b {
+  display: block;
+  color: #e28227;
+  font-size: 24px;
+}
+.summary-grid span {
+  color: #9d7a5a;
+  font-size: 12px;
+  font-weight: 800;
+}
+.day-card h3 {
+  margin: 0 0 12px;
+  color: #e28227;
+  font-size: 24px;
+}
+.day-card p {
+  color: #6d4a35;
+  line-height: 1.55;
+  margin: 8px 0;
+}
+.list-input-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  margin-top: 12px;
+}
+.list-input-row .cat-input {
+  margin-bottom: 0;
+}
+.list-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin-top: 12px;
+}
+.list-tags span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #fff4d8;
+  color: #8a4c1c;
+  border: 2px solid #ffcf83;
+  border-radius: 999px;
+  padding: 9px 12px;
+  font-weight: 900;
+}
+.list-tags button {
+  border: 0;
+  background: #ffad5a;
+  color: #fff;
+  border-radius: 999px;
+  width: 22px;
+  height: 22px;
+  font-weight: 900;
+}
+@media (max-width: 460px) {
+  .target-grid, .summary-grid {
+    grid-template-columns: 1fr;
+  }
+}
