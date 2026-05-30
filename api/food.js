@@ -19,15 +19,14 @@ export default async function handler(req, res) {
 今日心情：${form?.mood || "未指定"}
 食材庫：${pantryText || "沒有"}
 地區：${settings?.location || "香港"}
-圖片風格：${settings?.imageStyle || "超寫實美食攝影"}
 飲食偏好：${(settings?.dietPrefs || []).join("、") || "無"}
 過敏設定：${(settings?.allergies || []).join("、") || "無"}
 健康目標：${(settings?.healthGoals || []).join("、") || "無"}
 個人口味：${(settings?.tastes || []).join("、") || "無"}
 
 請生成一個 FoodMind AI 食物建議。
-如果飲食方式是「外賣」，請提供推薦菜式、推薦原因、推薦地點、營養分析及圖片生成 prompt。
-如果飲食方式是「自己煮」，請提供建議菜式、材料清單、製作步驟、烹調時間、難度、營養分析及圖片生成 prompt。
+如果飲食方式是「外賣」，請提供推薦菜式、推薦原因、推薦地點、營養分析。
+如果飲食方式是「自己煮」，請提供建議菜式、材料清單、製作步驟、烹調時間、難度、營養分析。
 請使用香港繁體中文。
 `;
 
@@ -58,7 +57,7 @@ JSON 格式必須為：
   "difficulty": "",
   "nutrition": {"calories":0,"protein":0,"fat":0,"carbs":0,"fiber":0,"healthScore":0},
   "tips": "",
-  "imagePrompt": ""
+  "note": ""
 }`
           },
           { role: "user", content: userPrompt }

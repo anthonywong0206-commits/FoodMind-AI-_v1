@@ -4,8 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   ChefHat, ShoppingBag, Home, Sparkles, Refrigerator, Settings, Camera,
   Plus, Trash2, Search, Utensils, MapPin, Clock, HeartPulse, Wand2,
-  CalendarDays, Leaf, AlertTriangle, Apple, Flame, Star, Image as ImageIcon,
-  Loader2, History, Salad, Coffee, Moon, SunMedium, ShieldCheck
+  CalendarDays, Leaf, AlertTriangle, Apple, Flame, Star, Loader2, History, Salad, Coffee, Moon, SunMedium, ShieldCheck
 } from 'lucide-react'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, RadialBarChart,
@@ -21,7 +20,6 @@ const STORAGE_KEYS = {
 }
 
 const defaultSettings = {
-  imageStyle: '超寫實美食攝影',
   dietPrefs: [],
   allergies: [],
   healthGoals: [],
@@ -38,7 +36,6 @@ const mealOptions = [
 ]
 
 const moodOptions = ['😊 開心', '😌 放鬆', '😴 好攰', '🤒 唔舒服', '😋 好想食好嘢', '🏃 健康模式']
-const imageStyles = ['超寫實美食攝影', '水彩插畫', '可愛卡通', '日系手繪', '遊戲美術風', 'Instagram Food Style', '食譜書風格']
 const dietPrefs = ['素食', '純素', '低碳', '高蛋白', '生酮', '地中海飲食', '清真', '無麩質']
 const allergies = ['海鮮', '花生', '牛奶', '蛋類', '大豆', '堅果']
 const healthGoals = ['減肥', '增肌', '維持體重', '控制血糖', '控制膽固醇', '高蛋白飲食', '低鹽飲食']
@@ -114,8 +111,6 @@ function mockFoodResult(form, settings) {
     title,
     type: form.mode,
     meal: form.meal,
-    imagePrompt: `${settings.imageStyle}，${title}，高級美食攝影，柔和自然光，乾淨餐桌背景，令人有食慾`,
-    imageUrl: demoImages[Math.floor(Math.random() * demoImages.length)],
     reason: [
       `配合你選擇的「${form.mood}」心情。`,
       `符合「${form.craving || '想食好嘢'}」方向。`,
@@ -216,18 +211,10 @@ function App() {
         result = mockFoodResult(form, settings)
       } else {
         result = await postJson('/api/food', { form, settings, pantry }, 30000)
-        // 穩定版：暫停即時 AI 圖片生成，避免圖片 base64 過大導致白屏。
-        // 先使用高質素預設美食圖；AI 圖片可在下一版改為後端儲存 URL。
-        result.imageUrl = demoImages[Math.floor(Math.random() * demoImages.length)]
       }
 
-      const safeResult = {
-        ...result,
-        imageUrl: result.imageUrl && result.imageUrl.startsWith('data:image') ? demoImages[0] : result.imageUrl
-      }
-
-      setLastResult(safeResult)
-      setHistory([{ id: crypto.randomUUID(), date: new Date().toLocaleString(), ...safeResult }, ...history].slice(0, 20))
+      setLastResult(result)
+      setHistory([{ id: crypto.randomUUID(), date: new Date().toLocaleString(), ...result }, ...history].slice(0, 20))
       setTab('result')
     } catch (e) {
       setNotice(`AI 生成失敗：${e.message}。如剛部署，請檢查 Vercel 是否已設定 OPENAI_API_KEY，或先到設定開啟 Demo 模式測試。`)
@@ -445,24 +432,23 @@ function ResultPage({ result, onBack, onAgain, loading }) {
   return (
     <motion.main key="result" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="grid gap-5 lg:grid-cols-[1fr_.8fr]">
       <Card className="overflow-hidden">
-        <img src={result.imageUrl || demoImages[0]} alt={result.title} className="h-72 w-full object-cover md:h-96" />
-        <div className="p-6">
+        <div className="p-6 md:p-8">
           <p className="mb-2 inline-flex rounded-full bg-emerald-100 px-3 py-1 text-sm font-black text-emerald-800">{result.meal}・{result.type}</p>
-          <h2 className="mb-3 text-4xl font-black tracking-tight">{result.title}</h2>
+          <h2 className="mb-3 text-4xl font-black tracking-tight">🍜 {result.title}</h2>
           <div className="mb-5 flex flex-wrap gap-2">
             <span className="rounded-full bg-stone-100 px-3 py-1 text-sm font-bold"><Clock size={14} className="mr-1 inline" />{result.time}</span>
             <span className="rounded-full bg-stone-100 px-3 py-1 text-sm font-bold"><Flame size={14} className="mr-1 inline" />{result.nutrition?.calories || '-'} kcal</span>
             <span className="rounded-full bg-stone-100 px-3 py-1 text-sm font-bold"><Star size={14} className="mr-1 inline" />{result.difficulty}</span>
           </div>
 
-          <h3 className="mb-2 text-lg font-black">推薦原因</h3>
+          <h3 className="mb-2 text-lg font-black">📝 推薦原因</h3>
           <div className="mb-6 grid gap-2">
             {(result.reason || []).map((r, i) => <div key={i} className="rounded-2xl bg-amber-50 p-3 text-sm font-bold text-amber-900">✔ {r}</div>)}
           </div>
 
           {result.type === '外賣' ? (
             <>
-              <h3 className="mb-2 text-lg font-black">推薦地點</h3>
+              <h3 className="mb-2 text-lg font-black">📍 附近餐廳</h3>
               <div className="grid gap-3">
                 {(result.places || []).map((p, i) => (
                   <div key={i} className="flex items-center justify-between rounded-3xl border border-stone-200 bg-white p-4">
@@ -497,7 +483,7 @@ function ResultPage({ result, onBack, onAgain, loading }) {
 
       <div className="space-y-5">
         <Card className="p-5">
-          <h3 className="mb-4 flex items-center gap-2 text-xl font-black"><HeartPulse className="text-red-500" /> AI 營養分析</h3>
+          <h3 className="mb-4 flex items-center gap-2 text-xl font-black"><HeartPulse className="text-red-500" /> 🥗 營養分析</h3>
           <div className="h-56">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData}>
@@ -674,11 +660,6 @@ function SettingsPage({ settings, setSettings, history, weekly, generateWeeklyPl
 
           <label className="mb-2 block text-sm font-black">地區 / 位置</label>
           <input className="mb-5 w-full rounded-2xl border border-stone-200 px-4 py-3 outline-none focus:border-amber-500" value={settings.location} onChange={e => setSettings({ ...settings, location: e.target.value })} />
-
-          <label className="mb-2 flex items-center gap-2 text-sm font-black"><ImageIcon size={16} /> AI 圖片風格</label>
-          <select className="w-full rounded-2xl border border-stone-200 px-4 py-3 outline-none focus:border-amber-500" value={settings.imageStyle} onChange={e => setSettings({ ...settings, imageStyle: e.target.value })}>
-            {imageStyles.map(x => <option key={x}>{x}</option>)}
-          </select>
         </Card>
 
         <Card className="p-6">
