@@ -30,7 +30,7 @@ const defaultSettings = {
   whitelist: [],
   location: '香港',
   useDemo: false,
-  nutritionStrategy: '均衡飲食，高蛋白，少油少糖',
+  nutritionStrategy: '貼近香港日常飲食，少油少糖，半飯加菜，高蛋白',
   calorieTarget: '1800 kcal',
   proteinTarget: '90 g',
   mainGoal: '維持體重'
@@ -239,7 +239,7 @@ function HomePage({ form, setForm, generate, loading, pantry, expiring, setTab, 
       <Card><h3 className="section-heading">🍽️ 想食邊餐？</h3><div className="meal-grid">{meals.map(({id,icon:Icon,emoji})=><button key={id} onClick={()=>setForm({...form,meal:id})} className={cx('meal-card',form.meal===id&&'selected')}><span>{emoji}</span><Icon size={22}/><b>{id}</b></button>)}</div></Card>
       <Card><h3 className="section-heading">🥢 食法</h3><div className="mode-grid"><button onClick={()=>setForm({...form,mode:'自己煮'})} className={cx('mode-card',form.mode==='自己煮'&&'selected')}><Home/><b>自己煮</b><small>貓主廚教你煮</small></button><button onClick={()=>setForm({...form,mode:'外賣'})} className={cx('mode-card',form.mode==='外賣'&&'selected')}><ShoppingBag/><b>外賣</b><small>只推薦食咩</small></button></div></Card>
       <Card><h3 className="section-heading">💛 今日心情</h3><div className="chip-row">{moods.map(m=><Chip key={m} active={form.mood===m} onClick={()=>setForm({...form,mood:m})}>{m}</Chip>)}</div></Card>
-      <Card><h3 className="section-heading">🍜 今日想食咩？</h3><input className="cat-input" value={form.craving} onChange={e=>setForm({...form,craving:e.target.value})} placeholder="例如：牛肉、米線、兩餸飯、雞翼、辣嘢..." /><div className="quick-tags">{['港式','米線','兩餸飯','燒味','日式','韓式','健康啲'].map(x=><button key={x} onClick={()=>setForm({...form,craving:x})}>{x}</button>)}</div>{notice&&<p className="notice">{notice}</p>}<Button onClick={generate} disabled={loading} className="big-cta">{loading?<Loader2 className="spin"/>:<Sparkles/>} 生成貓主廚餐單</Button></Card>
+      <Card><h3 className="section-heading">🍜 今日想食咩？</h3><input className="cat-input" value={form.craving} onChange={e=>setForm({...form,craving:e.target.value})} placeholder="例如：番茄牛肉通粉、兩餸飯、米線、燒味、雞胸飯..." /><div className="quick-tags">{['番茄牛肉通粉','兩餸飯','叉燒煎蛋飯','米線','蒸水蛋肉碎飯','雞胸糙米飯','健康啲'].map(x=><button key={x} onClick={()=>setForm({...form,craving:x})}>{x}</button>)}</div>{notice&&<p className="notice">{notice}</p>}<Button onClick={generate} disabled={loading} className="big-cta">{loading?<Loader2 className="spin"/>:<Sparkles/>} 生成貓主廚餐單</Button></Card>
       <Card className="fridge-preview"><div><h3>🐾 我的雪櫃</h3><p>{pantry.length} 種食材・{expiring.length} 種快到期</p></div><Button variant="soft" onClick={()=>setTab('pantry')}>打開雪櫃</Button></Card>
     </motion.section>
   )

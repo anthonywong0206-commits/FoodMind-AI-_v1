@@ -1,3 +1,11 @@
+import { hkFoodDb } from "./data/hkFoodDb.js";
+
+function foodDbText() {
+  return Object.entries(hkFoodDb.categories)
+    .map(([category, items]) => `${category}：${items.join("、")}`)
+    .join("\n");
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
@@ -12,22 +20,35 @@ export default async function handler(req, res) {
     const whitelist = (settings.whitelist || []).filter(Boolean).join("、") || "無";
 
     const systemPrompt = `
-你是 FoodMind Cat Chef AI 的營養管理助手。請為香港用戶生成一星期餐單。
-使用香港繁體中文。餐單要貼近香港人口味，但要健康、多元、可執行。
+你是 FoodMind Cat Chef AI 的香港營養管理助手。請為香港用戶生成一星期餐單。
 
-必須遵守：
-1. 絕對不要使用黑名單食物：${blacklist}
-2. 優先考慮白名單食物，但要多元化：${whitelist}
-3. 根據健康飲食策略：${settings.nutritionStrategy || "均衡飲食"}
-4. 每日卡路里目標：${settings.calorieTarget || "無指定"}
-5. 每日蛋白質目標：${settings.proteinTarget || "無指定"}
-6. 飲食偏好：${(settings.dietPrefs || []).join("、") || "無"}
-7. 過敏設定：${(settings.allergies || []).join("、") || "無"}
-8. 健康目標：${(settings.healthGoals || []).join("、") || "無"}
-9. 現有食材：${pantryText}
-10. 每日都要有早餐、午餐、晚餐，可有小食建議。
-11. 每日要顯示估算 calories、protein、fat、carbs、fiber、healthScore。
-12. 避免每日重覆相同食物。
+【香港常見食物資料庫】
+你必須優先使用以下合理選擇或合理變化：
+${foodDbText()}
+
+【嚴格禁止】
+${hkFoodDb.avoid_weird_combinations.map((x) => `- ${x}`).join("\n")}
+
+【餐單規則】
+- 絕對不要使用黑名單食物：${blacklist}
+- 可優先考慮白名單食物：${whitelist}
+- 不要生成奇怪菜式，不要亂混搭。
+- 每日要多元，但仍然像香港人日常會食的餐單。
+- 早餐要合理快速；午餐要飽肚；晚餐要均衡；小食要簡單健康。
+- 不要寫真實餐廳。
+- 每日避免全日過油、過鹹、過甜。
+- 如有控制血糖、低鹽、減肥、增肌等目標，要反映在餐單。
+- 如有過敏，必須避開。
+- 每日營養估算要合理。
+
+【用戶設定】
+健康飲食策略：${settings.nutritionStrategy || "均衡飲食"}
+每日卡路里目標：${settings.calorieTarget || "無指定"}
+每日蛋白質目標：${settings.proteinTarget || "無指定"}
+飲食偏好：${(settings.dietPrefs || []).join("、") || "無"}
+過敏設定：${(settings.allergies || []).join("、") || "無"}
+健康目標：${(settings.healthGoals || []).join("、") || "無"}
+現有食材：${pantryText}
 
 只輸出 JSON：
 {
@@ -51,15 +72,19 @@ export default async function handler(req, res) {
       headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         model: "gpt-4o-mini",
-        temperature: 0.85,
+        temperature: 0.5,
+        presence_penalty: 0.15,
+        frequency_penalty: 0.25,
         response_format: { type: "json_object" },
-        messages: [{ role: "system", content: systemPrompt }, { role: "user", content: "請生成完整一星期營養餐單。" }]
+        messages: [{ role: "system", content: systemPrompt }, { role: "user", content: "請生成貼近香港環境的一星期營養餐單，不要奇怪菜式。" }]
       })
     });
 
     const data = await response.json();
     if (!response.ok) return res.status(response.status).json({ error: data?.error?.message || "OpenAI request failed", detail: data });
-    return res.status(200).json(JSON.parse(data.choices?.[0]?.message?.content || "{}"));
+
+    const parsed = JSON.parse(data.choices?.[0]?.message?.content || "{}");
+    return res.status(200).json(parsed);
   } catch (error) {
     return res.status(500).json({ error: error.message || "Server error" });
   }
