@@ -747,3 +747,24 @@ button { cursor: pointer; }
   .restaurant-row { grid-template-columns: repeat(3, 150px); }
   .nutrition-grid, .ingredient-grid { grid-template-columns: 1fr; }
 }
+
+
+/* ===== Cat Chef Edition ===== */
+body{
+background:linear-gradient(180deg,#fff8ef 0%,#ffecc9 100%) !important;
+}
+.hero-menu{
+background:linear-gradient(135deg,#fff7d8,#ffe2a8)!important;
+}
+.brand h1{
+color:#c8741f!important;
+}
+.lux-card,.form-card,.setting-card,.chart-card{
+border-radius:32px!important;
+}
+.lux-btn{
+background:linear-gradient(135deg,#ffcf6b,#ffab3d)!important;
+}
+.bottom-nav{
+background:#fff8ef!important;
+}

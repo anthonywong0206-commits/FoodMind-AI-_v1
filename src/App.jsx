@@ -186,7 +186,7 @@ function LoadingOverlay({ show }) {
             <ChefHat size={42} />
           </motion.div>
           <motion.h2 initial={{ y: 12, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="loading-title">
-            AI 主廚正在諗香港味
+            😺 AI貓主廚正在諗香港味
           </motion.h2>
           <motion.p initial={{ y: 12, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: .2 }} className="loading-subtitle">
             正在分析港式口味、食材、營養與附近餐廳…
@@ -268,8 +268,8 @@ function App() {
           <div className="brand">
             <Crown size={20} />
             <div>
-              <h1>FoodMind AI</h1>
-              <p>AI 主廚・香港口味餐單</p>
+              <h1>FoodMind Cat Chef AI</h1>
+              <p>😺 AI貓主廚・香港口味餐單</p>
             </div>
           </div>
           <button className="icon-btn">♢</button>
@@ -281,7 +281,7 @@ function App() {
               <section className="hero-menu">
                 <div className="hero-glow"></div>
                 <p className="eyebrow"><ChefHat size={16} /> Chef’s Choice</p>
-                <h2>今日食咩好？<br /><span>AI 幫你諗好！</span></h2>
+                <h2>😺 今日食咩好呀？<br /><span>AI 幫你諗好！</span></h2>
                 <p className="hero-text">根據香港人口味、營養需要、現有食材及附近餐廳，為你推薦最啱今日的一餐。</p>
                 <Button onClick={handleGenerate} disabled={loading} className="hero-btn">
                   <ChefHat /> AI 幫我諗食咩 <span>›</span>
@@ -334,7 +334,7 @@ function App() {
               </Card>
 
               <section className="section-title">
-                <h3>🔥 熱門推薦</h3>
+                <h3>🐟 今日精選</h3>
                 <button>查看全部 ›</button>
               </section>
               <div className="recommend-list">
@@ -352,7 +352,7 @@ function App() {
               </div>
 
               <section className="section-title">
-                <h3>📍 附近人氣餐廳</h3>
+                <h3>🍱 貓主廚精選</h3>
                 <button>查看地圖 ›</button>
               </section>
               <div className="restaurant-row">
@@ -432,7 +432,7 @@ function ResultPage({ result, onBack, onAgain, loading }) {
         <Card className="empty-card">
           <ChefHat size={48} />
           <h2>未有 AI 餐單</h2>
-          <p>返首頁輸入想食咩，AI 主廚就會幫你配餐。</p>
+          <p>返首頁輸入想食咩，😺 AI貓主廚就會幫你配餐。</p>
           <Button onClick={onBack}>返首頁</Button>
         </Card>
       </motion.main>
@@ -619,7 +619,7 @@ function PantryPage({ pantry, setPantry, settings, setNotice, setTab, setLastRes
       <section className="page-title">
         <Refrigerator />
         <div>
-          <h2>我的雪櫃</h2>
+          <h2>🐾 我的雪櫃</h2>
           <p>管理現有食材，讓 AI 更懂你今日食咩。</p>
         </div>
       </section>
@@ -765,7 +765,7 @@ class ErrorBoundary extends React.Component {
         <div className="app-shell">
           <div className="app-container">
             <Card className="empty-card">
-              <h1>FoodMind AI 載入出錯</h1>
+              <h1>FoodMind Cat Chef AI 載入出錯</h1>
               <p>{this.state.message}</p>
               <Button onClick={() => {
                 localStorage.removeItem(STORAGE_KEYS.lastResult)
