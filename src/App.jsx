@@ -113,9 +113,9 @@ function mockFoodResult(form, settings) {
     ],
     places: isDelivery
       ? [
-          { name: 'The Waverley', distance: '約 0.5 km', rating: '4.8', price: '$$' },
-          { name: 'L’escargot', distance: '約 0.7 km', rating: '4.7', price: '$$$' },
-          { name: 'Nobu Hong Kong', distance: '約 0.9 km', rating: '4.9', price: '$$$' }
+          { name: '附近港式茶餐廳', distance: '約 0.3 km', rating: '4.3', price: '$' },
+          { name: '米線 / 車仔麵專門店', distance: '約 0.5 km', rating: '4.4', price: '$' },
+          { name: '日式便當 / 健康飯盒店', distance: '約 0.8 km', rating: '4.5', price: '$$' }
         ]
       : [],
     ingredients: isDelivery ? [] : [
@@ -186,10 +186,10 @@ function LoadingOverlay({ show }) {
             <ChefHat size={42} />
           </motion.div>
           <motion.h2 initial={{ y: 12, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="loading-title">
-            AI 主廚正在為你配餐
+            AI 主廚正在諗香港味
           </motion.h2>
           <motion.p initial={{ y: 12, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: .2 }} className="loading-subtitle">
-            正在分析口味、食材、營養與附近餐廳…
+            正在分析港式口味、食材、營養與附近餐廳…
           </motion.p>
           <div className="gold-dots"><span></span><span></span><span></span></div>
         </motion.div>
@@ -269,7 +269,7 @@ function App() {
             <Crown size={20} />
             <div>
               <h1>FoodMind AI</h1>
-              <p>AI 主廚・高級餐單推薦</p>
+              <p>AI 主廚・香港口味餐單</p>
             </div>
           </div>
           <button className="icon-btn">♢</button>
@@ -282,7 +282,7 @@ function App() {
                 <div className="hero-glow"></div>
                 <p className="eyebrow"><ChefHat size={16} /> Chef’s Choice</p>
                 <h2>今日食咩好？<br /><span>AI 幫你諗好！</span></h2>
-                <p className="hero-text">根據你的口味、營養需要、現有食材及附近餐廳，為你推薦最適合的一餐。</p>
+                <p className="hero-text">根據香港人口味、營養需要、現有食材及附近餐廳，為你推薦最啱今日的一餐。</p>
                 <Button onClick={handleGenerate} disabled={loading} className="hero-btn">
                   <ChefHat /> AI 幫我諗食咩 <span>›</span>
                 </Button>
@@ -329,7 +329,7 @@ function App() {
                 {notice && <p className="notice">{notice}</p>}
 
                 <Button onClick={handleGenerate} disabled={loading} className="wide-cta">
-                  {loading ? <Loader2 className="spin" /> : <Wand2 />} 生成我的高級餐單
+                  {loading ? <Loader2 className="spin" /> : <Wand2 />} 生成我的香港餐單
                 </Button>
               </Card>
 
@@ -338,12 +338,12 @@ function App() {
                 <button>查看全部 ›</button>
               </section>
               <div className="recommend-list">
-                {['蒜香蝦仁意大利麵','香煎三文魚配檸檬牛油醬','香草烤雞配薯菜'].map((x, i) => (
+                {['番茄濃湯焗豬扒飯','麻辣雞翼米線','叉燒煎蛋飯'].map((x, i) => (
                   <Card className="mini-dish" key={x}>
                     <div className="dish-icon">{i + 1}</div>
                     <div>
                       <h4>{x}</h4>
-                      <p>{i === 0 ? '高蛋白・低脂肪・20分鐘' : i === 1 ? 'Omega-3・高蛋白・低碳水' : '低脂肪・高纖維・30分鐘'}</p>
+                      <p>{i === 0 ? '港式comfort food・飽肚' : i === 1 ? '惹味・暖胃・可走辣' : '快靚正・返工午餐'}</p>
                       <strong>{4.8 - i * .1} ★★★★★</strong>
                     </div>
                     <button className="heart">♡</button>
@@ -356,11 +356,11 @@ function App() {
                 <button>查看地圖 ›</button>
               </section>
               <div className="restaurant-row">
-                {['The Waverley','L’escargot','Nobu Hong Kong'].map((x, i) => (
+                {['港式茶餐廳','燒味飯店','泰越小店'].map((x, i) => (
                   <Card className="restaurant-card" key={x}>
                     <div className="restaurant-symbol"><Utensils size={20} /></div>
                     <h4>{x}</h4>
-                    <p>{i === 0 ? '西餐・高級餐廳' : i === 1 ? '法式・精緻料理' : '日式・壽司'}</p>
+                    <p>{i === 0 ? '早餐・碟頭飯・常餐' : i === 1 ? '叉燒・燒鵝・雙拼飯' : '香茅・湯粉・咖喱'}</p>
                     <small>⌖ {0.5 + i * .2} km</small>
                     <strong>⭐ {4.8 + i * .05}</strong>
                   </Card>
