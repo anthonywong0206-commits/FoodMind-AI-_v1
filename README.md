@@ -80,3 +80,15 @@ Value: sk-proj-xxxxxxxxxxxxxxxx
 4. 開網站
 5. 設定頁可關閉 / 開啟 Demo 模式
 6. 關閉 Demo 模式後，AI 會使用後端 API 連 OpenAI
+
+
+## v2-stable 更新
+
+這個版本修正：
+- 按「AI 幫我揀」後長時間 loading
+- 圖片生成過慢
+- base64 圖片存入 localStorage 導致白屏
+- 加入 API timeout
+- 加入錯誤保護畫面
+
+目前穩定版會先使用預設高質素食物圖，AI 文字建議仍然會經 `/api/food` 使用後端 OpenAI。

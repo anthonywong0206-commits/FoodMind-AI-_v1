@@ -81,15 +81,29 @@ function daysLeft(expiry) {
   return Math.ceil((exp - now) / (1000 * 60 * 60 * 24))
 }
 
-async function postJson(url, body) {
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  })
-  const data = await res.json().catch(() => ({}))
-  if (!res.ok) throw new Error(data.error || 'API request failed')
-  return data
+async function postJson(url, body, timeoutMs = 25000) {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), timeoutMs)
+
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: controller.signal
+    })
+
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) throw new Error(data.error || 'API request failed')
+    return data
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      throw new Error('AI 回應逾時，請稍後再試或開啟 Demo 模式')
+    }
+    throw err
+  } finally {
+    clearTimeout(timer)
+  }
 }
 
 function mockFoodResult(form, settings) {
@@ -201,17 +215,19 @@ function App() {
       if (settings.useDemo) {
         result = mockFoodResult(form, settings)
       } else {
-        result = await postJson('/api/food', { form, settings, pantry })
-        try {
-          const img = await postJson('/api/image', { prompt: result.imagePrompt || result.title })
-          result.imageUrl = img.imageUrl || demoImages[Math.floor(Math.random() * demoImages.length)]
-        } catch {
-          result.imageUrl = demoImages[Math.floor(Math.random() * demoImages.length)]
-        }
+        result = await postJson('/api/food', { form, settings, pantry }, 30000)
+        // 穩定版：暫停即時 AI 圖片生成，避免圖片 base64 過大導致白屏。
+        // 先使用高質素預設美食圖；AI 圖片可在下一版改為後端儲存 URL。
+        result.imageUrl = demoImages[Math.floor(Math.random() * demoImages.length)]
       }
 
-      setLastResult(result)
-      setHistory([{ id: crypto.randomUUID(), date: new Date().toLocaleString(), ...result }, ...history].slice(0, 30))
+      const safeResult = {
+        ...result,
+        imageUrl: result.imageUrl && result.imageUrl.startsWith('data:image') ? demoImages[0] : result.imageUrl
+      }
+
+      setLastResult(safeResult)
+      setHistory([{ id: crypto.randomUUID(), date: new Date().toLocaleString(), ...safeResult }, ...history].slice(0, 20))
       setTab('result')
     } catch (e) {
       setNotice(`AI 生成失敗：${e.message}。如剛部署，請檢查 Vercel 是否已設定 OPENAI_API_KEY，或先到設定開啟 Demo 模式測試。`)
@@ -720,4 +736,51 @@ function SettingGroup({ title, icon, options, selected, onToggle }) {
   )
 }
 
-export default App
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props)
+    this.state = { hasError: false, message: '' }
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, message: error?.message || '網站出現錯誤' }
+  }
+
+  componentDidCatch(error) {
+    console.error('FoodMind UI error:', error)
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-stone-50 p-6 text-stone-900">
+          <div className="mx-auto max-w-xl rounded-[2rem] bg-white p-6 shadow-soft">
+            <h1 className="mb-3 text-2xl font-black">FoodMind AI 載入出錯</h1>
+            <p className="mb-4 text-sm text-stone-500">{this.state.message}</p>
+            <button
+              className="rounded-2xl bg-amber-500 px-4 py-3 font-bold text-white"
+              onClick={() => {
+                localStorage.removeItem('foodmind_last_result_v2')
+                window.location.reload()
+              }}
+            >
+              清除暫存並重新載入
+            </button>
+          </div>
+        </div>
+      )
+    }
+
+    return this.props.children
+  }
+}
+
+function SafeApp() {
+  return (
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>
+  )
+}
+
+export default SafeApp
