@@ -1,0 +1,270 @@
+import React, { useEffect, useMemo, useState } from 'react'
+import { Apple, ChefHat, Home, Image, MapPin, Plus, Settings, Sparkles, Trash2, Utensils, Camera, CalendarDays, Search, Salad, HeartPulse, History, Refrigerator, Wand2 } from 'lucide-react'
+import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, RadialBarChart, RadialBar } from 'recharts'
+
+const STORAGE_KEY = 'foodmind-ai-v1'
+
+const mealTimes = ['早餐', '午餐', '晚餐', '宵夜']
+const modes = ['自己煮', '外賣']
+const moods = ['😊 開心', '😌 放鬆', '😴 好攰', '🤒 唔舒服', '😋 好想食好嘢', '🏃 健康模式']
+const imageStyles = ['🍜 超寫實美食攝影', '🎨 水彩插畫', '🧸 可愛卡通', '🇯🇵 日系手繪', '🎮 遊戲美術風', '📸 Instagram Food Style', '🍳 食譜書風格']
+const diets = ['素食', '純素', '低碳', '高蛋白', '生酮', '地中海飲食', '清真', '無麩質']
+const allergies = ['海鮮', '花生', '牛奶', '蛋類', '大豆', '堅果']
+const goals = ['減肥', '增肌', '維持體重', '控制血糖', '控制膽固醇', '高蛋白飲食', '低鹽飲食']
+const tastes = ['甜', '酸', '辣', '鹹', '清淡', '重口味']
+
+const demoImages = {
+  '自己煮': 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=1200&q=80',
+  '外賣': 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?auto=format&fit=crop&w=1200&q=80'
+}
+
+const defaultState = {
+  activeTab: 'planner',
+  planner: {
+    mealTime: '午餐',
+    mode: '外賣',
+    mood: '😋 好想食好嘢',
+    craving: '雞扒飯、日式、想食暖笠笠'
+  },
+  result: null,
+  pantry: [
+    { id: 1, name: '雞蛋', qty: '6隻', expiry: '2026-06-05', category: '蛋奶' },
+    { id: 2, name: '洋蔥', qty: '2個', expiry: '2026-06-12', category: '蔬菜' },
+    { id: 3, name: '牛奶', qty: '1盒', expiry: '2026-06-02', category: '蛋奶' }
+  ],
+  history: [],
+  settings: {
+    imageStyle: '🍜 超寫實美食攝影',
+    diets: ['高蛋白'],
+    allergies: [],
+    goals: ['維持體重'],
+    tastes: ['清淡']
+  },
+  apiKey: ''
+}
+
+function loadState() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY)
+    return saved ? { ...defaultState, ...JSON.parse(saved) } : defaultState
+  } catch {
+    return defaultState
+  }
+}
+
+function App() {
+  const [state, setState] = useState(loadState)
+  const [loading, setLoading] = useState(false)
+  const [pantryInput, setPantryInput] = useState({ name: '', qty: '', expiry: '', category: '其他' })
+  const [search, setSearch] = useState('')
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
+  }, [state])
+
+  const update = (patch) => setState((s) => ({ ...s, ...patch }))
+  const updatePlanner = (patch) => setState((s) => ({ ...s, planner: { ...s.planner, ...patch } }))
+  const updateSettings = (patch) => setState((s) => ({ ...s, settings: { ...s.settings, ...patch } }))
+
+  const pantryFiltered = useMemo(() => {
+    return state.pantry.filter((item) => item.name.includes(search) || item.category.includes(search))
+  }, [state.pantry, search])
+
+  async function callOpenAI(prompt, imageBase64 = null) {
+    if (!state.apiKey) return null
+    const messages = [
+      { role: 'system', content: '你是一位香港本地化 AI 食物建議助手。請用繁體中文、實用、簡潔、有食慾感地回答。' },
+      { role: 'user', content: imageBase64 ? [
+        { type: 'text', text: prompt },
+        { type: 'image_url', image_url: { url: imageBase64 } }
+      ] : prompt }
+    ]
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${state.apiKey}` },
+      body: JSON.stringify({ model: imageBase64 ? 'gpt-4o-mini' : 'gpt-4o-mini', messages, temperature: .8 })
+    })
+    const data = await res.json()
+    return data?.choices?.[0]?.message?.content || null
+  }
+
+  async function generateFood() {
+    setLoading(true)
+    const { planner, settings } = state
+    const prompt = `根據以下資料生成一個食物建議，請用 JSON 回覆，不要 markdown。欄位：title, reason, calories, protein, carbs, fat, fiber, healthScore, time, difficulty, tips, ingredients 陣列, steps 陣列, places 陣列[{name,distance,rating,price}], imagePrompt。資料：用餐時段=${planner.mealTime}; 模式=${planner.mode}; 心情=${planner.mood}; 想食=${planner.craving}; 飲食偏好=${settings.diets.join(',')}; 過敏=${settings.allergies.join(',')}; 健康目標=${settings.goals.join(',')}; 口味=${settings.tastes.join(',')}; 圖片風格=${settings.imageStyle}`
+    let ai = null
+    try { ai = await callOpenAI(prompt) } catch {}
+    let parsed = null
+    try { parsed = ai ? JSON.parse(ai.replace(/```json|```/g, '').trim()) : null } catch {}
+    const fallback = planner.mode === '外賣'
+      ? {
+          title: planner.craving.includes('麵') ? '濃湯雞肉烏冬' : '炭燒雞扒溫泉蛋飯',
+          reason: `適合${planner.mood.replace(/^[^ ]+ /, '')}的${planner.mealTime}，飽肚、有蛋白質，而且味道唔會太悶。`,
+          calories: 690, protein: 38, carbs: 72, fat: 24, fiber: 6, healthScore: 78,
+          time: '15–30分鐘', difficulty: '免煮', tips: '叫少汁、加菜、飲品轉無糖會健康好多。',
+          ingredients: ['雞扒', '白飯', '溫泉蛋', '沙律菜', '照燒汁'],
+          steps: [],
+          places: [
+            { name: '大家樂', distance: '約 450m', rating: '4.0', price: '$45–70' },
+            { name: '日式便當店', distance: '約 650m', rating: '4.3', price: '$58–88' },
+            { name: '譚仔雲南米線', distance: '約 700m', rating: '4.1', price: '$45–75' }
+          ],
+          imagePrompt: 'Commercial realistic food photography, grilled chicken steak rice bowl with soft boiled egg, warm light, high resolution'
+        }
+      : {
+          title: '蒜香牛肉炒意粉',
+          reason: `用簡單材料做到有餐廳感，適合${planner.mealTime}，高蛋白又夠飽。`,
+          calories: 620, protein: 35, carbs: 68, fat: 20, fiber: 7, healthScore: 82,
+          time: '20分鐘', difficulty: '⭐⭐', tips: '加入西蘭花或菇類可增加纖維，牛肉可轉雞胸更低脂。',
+          ingredients: ['牛肉片', '意粉', '蒜頭', '洋蔥', '黑椒', '橄欖油'],
+          steps: ['意粉煮至八成熟，保留少量意粉水。', '牛肉用少量鹽、黑椒醃 5 分鐘。', '爆香蒜頭和洋蔥，加入牛肉快炒。', '加入意粉和意粉水拌炒，調味後上碟。'],
+          places: [],
+          imagePrompt: 'Realistic food photography, garlic beef pasta, home cooking, warm kitchen light, appetizing'
+        }
+    const result = { ...(parsed || fallback), mode: planner.mode, createdAt: new Date().toISOString(), imageUrl: demoImages[planner.mode] }
+    setState((s) => ({ ...s, result, history: [result, ...s.history].slice(0, 20), activeTab: 'result' }))
+    setLoading(false)
+  }
+
+  function addPantry() {
+    if (!pantryInput.name.trim()) return
+    setState((s) => ({ ...s, pantry: [{ ...pantryInput, id: Date.now(), createdAt: new Date().toLocaleDateString('zh-HK') }, ...s.pantry] }))
+    setPantryInput({ name: '', qty: '', expiry: '', category: '其他' })
+  }
+
+  function deletePantry(id) {
+    setState((s) => ({ ...s, pantry: s.pantry.filter((item) => item.id !== id) }))
+  }
+
+  async function identifyImage(file) {
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = async () => {
+      setLoading(true)
+      let text = null
+      try {
+        text = await callOpenAI('請辨識相中食材，回覆 JSON 陣列，每項包含 name, qty, category。', reader.result)
+      } catch {}
+      let items = []
+      try { items = JSON.parse(text.replace(/```json|```/g, '').trim()) } catch {
+        items = [{ name: '蕃茄', qty: '2個', category: '蔬菜' }, { name: '雞蛋', qty: '3隻', category: '蛋奶' }]
+      }
+      setState((s) => ({ ...s, pantry: [...items.map((x) => ({ id: Date.now() + Math.random(), expiry: '', createdAt: new Date().toLocaleDateString('zh-HK'), ...x })), ...s.pantry] }))
+      setLoading(false)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  function pantryRecipe() {
+    const names = state.pantry.map((i) => i.name).join('、') || '雞蛋、洋蔥、牛奶'
+    updatePlanner({ mode: '自己煮', mealTime: '晚餐', craving: `只用現有食材：${names}` })
+    generateFood()
+  }
+
+  return (
+    <div className="food-bg min-h-screen pb-28 text-ink">
+      <Header />
+      <main className="mx-auto max-w-6xl px-4 py-5 md:px-8">
+        {state.activeTab === 'planner' && <Planner state={state} updatePlanner={updatePlanner} generateFood={generateFood} loading={loading} />}
+        {state.activeTab === 'result' && <Result result={state.result} planner={state.planner} />}
+        {state.activeTab === 'pantry' && <Pantry pantryInput={pantryInput} setPantryInput={setPantryInput} addPantry={addPantry} deletePantry={deletePantry} pantryFiltered={pantryFiltered} search={search} setSearch={setSearch} identifyImage={identifyImage} pantryRecipe={pantryRecipe} loading={loading} />}
+        {state.activeTab === 'settings' && <SettingsPage state={state} update={update} updateSettings={updateSettings} />}
+      </main>
+      <BottomNav active={state.activeTab} setActive={(activeTab) => update({ activeTab })} />
+    </div>
+  )
+}
+
+function Header() {
+  return (
+    <header className="mx-auto max-w-6xl px-4 pt-6 md:px-8">
+      <div className="glass flex items-center justify-between rounded-[2rem] p-4 shadow-soft">
+        <div className="flex items-center gap-3">
+          <div className="grid h-12 w-12 place-items-center rounded-2xl bg-orange text-white shadow-lg"><Utensils /></div>
+          <div>
+            <h1 className="text-xl font-black md:text-2xl">FoodMind AI</h1>
+            <p className="text-sm text-stone-500">今日食咩？交俾 AI 幫你決定。</p>
+          </div>
+        </div>
+        <div className="hidden rounded-full bg-white/80 px-4 py-2 text-sm font-bold text-sage md:block">AI Food Planner</div>
+      </div>
+    </header>
+  )
+}
+
+function Planner({ state, updatePlanner, generateFood, loading }) {
+  return (
+    <section className="grid gap-5 lg:grid-cols-[1.1fr_.9fr]">
+      <div className="glass rounded-[2.2rem] p-5 shadow-soft md:p-8">
+        <div className="mb-6 flex items-center gap-3">
+          <Sparkles className="text-orange" />
+          <div><h2 className="text-2xl font-black">我諗緊想食咩？</h2><p className="text-stone-500">輸入一點方向，AI 幫你整理成一餐。</p></div>
+        </div>
+        <Choice title="用餐時段" options={mealTimes} value={state.planner.mealTime} onChange={(mealTime) => updatePlanner({ mealTime })} />
+        <Choice title="飲食方式" options={modes} value={state.planner.mode} onChange={(mode) => updatePlanner({ mode })} />
+        <Choice title="今日心情" options={moods} value={state.planner.mood} onChange={(mood) => updatePlanner({ mood })} />
+        <label className="mt-5 block text-sm font-black">想食類型</label>
+        <textarea value={state.planner.craving} onChange={(e) => updatePlanner({ craving: e.target.value })} className="mt-2 min-h-28 w-full rounded-3xl border-0 bg-white/90 p-4 shadow-inner outline-none focus:ring-4 focus:ring-orange/20" placeholder="例如：牛肉、雞翼、拉麵、飯、甜品、辣嘢、中菜、日式、韓式、西餐" />
+        <button onClick={generateFood} disabled={loading} className="mt-5 flex w-full items-center justify-center gap-2 rounded-3xl bg-orange px-6 py-4 text-lg font-black text-white shadow-lg transition hover:scale-[1.01] disabled:opacity-60">
+          <Wand2 /> {loading ? 'AI 諗緊食咩...' : 'AI 幫我揀'}
+        </button>
+      </div>
+      <div className="space-y-5">
+        <HeroCard />
+        <FeatureGrid />
+      </div>
+    </section>
+  )
+}
+
+function Choice({ title, options, value, onChange }) {
+  return <div className="mt-5"><p className="mb-2 text-sm font-black">{title}</p><div className="flex gap-2 overflow-x-auto pb-1 hide-scrollbar">{options.map((op) => <button key={op} onClick={() => onChange(op)} className={`whitespace-nowrap rounded-full px-4 py-2 text-sm font-bold transition ${value === op ? 'bg-ink text-white' : 'bg-white/85 text-stone-600'}`}>{op}</button>)}</div></div>
+}
+
+function HeroCard() {
+  return <div className="relative min-h-72 overflow-hidden rounded-[2.2rem] shadow-soft"><img className="absolute inset-0 h-full w-full object-cover" src="https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=1200&q=80" /><div className="absolute inset-0 bg-gradient-to-t from-black/65 to-transparent" /><div className="absolute bottom-5 left-5 right-5 text-white"><p className="mb-2 inline-flex rounded-full bg-white/20 px-3 py-1 text-xs font-bold backdrop-blur">Smart Food Decision</p><h3 className="text-3xl font-black">由心情到食材，一鍵變成食物提議。</h3></div></div>
+}
+
+function FeatureGrid() {
+  const items = [[ChefHat, 'AI 食譜', '自己整都有步驟'], [MapPin, '外賣建議', '菜式＋附近地點'], [Camera, '影相記食材', 'Vision 自動辨識'], [HeartPulse, '營養分析', '卡路里及健康評分']]
+  return <div className="grid grid-cols-2 gap-3">{items.map(([Icon, title, sub]) => <div key={title} className="glass card-hover rounded-3xl p-4"><Icon className="mb-3 text-orange" /><h4 className="font-black">{title}</h4><p className="text-sm text-stone-500">{sub}</p></div>)}</div>
+}
+
+function Result({ result }) {
+  if (!result) return <EmptyResult />
+  const nutrition = [{ name: '蛋白質', value: result.protein }, { name: '碳水', value: result.carbs }, { name: '脂肪', value: result.fat }, { name: '纖維', value: result.fiber }]
+  return (
+    <section className="grid gap-5 lg:grid-cols-[.95fr_1.05fr]">
+      <div className="glass overflow-hidden rounded-[2.2rem] shadow-soft"><img src={result.imageUrl} className="h-80 w-full object-cover" /><div className="p-5"><span className="rounded-full bg-orange/10 px-3 py-1 text-xs font-black text-orange">{result.mode}</span><h2 className="mt-3 text-3xl font-black">{result.title}</h2><p className="mt-2 text-stone-600">{result.reason}</p></div></div>
+      <div className="space-y-5">
+        <div className="glass rounded-[2rem] p-5 shadow-soft"><h3 className="mb-4 flex items-center gap-2 text-xl font-black"><Salad className="text-sage" />AI 營養分析</h3><div className="grid grid-cols-2 gap-3 md:grid-cols-4"><Metric label="熱量" value={`${result.calories} kcal`} /><Metric label="健康評分" value={`${result.healthScore}/100`} /><Metric label="時間" value={result.time} /><Metric label="難度" value={result.difficulty} /></div><div className="mt-5 h-52"><ResponsiveContainer width="100%" height="100%"><BarChart data={nutrition}><XAxis dataKey="name" /><Tooltip /><Bar dataKey="value" radius={[10,10,0,0]} /></BarChart></ResponsiveContainer></div></div>
+        {result.mode === '外賣' ? <Places places={result.places || []} /> : <Recipe result={result} />}
+        <div className="glass rounded-[2rem] p-5 shadow-soft"><h3 className="font-black">AI 小貼士</h3><p className="mt-2 text-stone-600">{result.tips}</p></div>
+      </div>
+    </section>
+  )
+}
+
+function Metric({ label, value }) { return <div className="rounded-3xl bg-white/80 p-4"><p className="text-xs font-bold text-stone-400">{label}</p><p className="mt-1 font-black">{value}</p></div> }
+function Places({ places }) { return <div className="glass rounded-[2rem] p-5 shadow-soft"><h3 className="mb-3 flex items-center gap-2 text-xl font-black"><MapPin className="text-orange" />推薦地點</h3><div className="space-y-3">{places.map((p, i) => <div key={i} className="rounded-3xl bg-white/80 p-4"><div className="flex justify-between gap-3"><b>{p.name}</b><span>{p.rating} ⭐</span></div><p className="text-sm text-stone-500">{p.distance} · {p.price}</p></div>)}</div></div> }
+function Recipe({ result }) { return <div className="glass rounded-[2rem] p-5 shadow-soft"><h3 className="mb-3 flex items-center gap-2 text-xl font-black"><ChefHat className="text-orange" />製作食譜</h3><p className="font-black">材料</p><div className="mt-2 flex flex-wrap gap-2">{(result.ingredients || []).map((x) => <span key={x} className="rounded-full bg-white px-3 py-1 text-sm font-bold">{x}</span>)}</div><p className="mt-4 font-black">步驟</p><ol className="mt-2 space-y-2">{(result.steps || []).map((s, i) => <li key={i} className="rounded-2xl bg-white/80 p-3 text-sm"><b>Step {i + 1}</b>｜{s}</li>)}</ol></div> }
+function EmptyResult() { return <div className="glass rounded-[2rem] p-8 text-center shadow-soft"><Sparkles className="mx-auto mb-3 text-orange" /><h2 className="text-2xl font-black">未有食物建議</h2><p className="text-stone-500">返回首頁按「AI 幫我揀」。</p></div> }
+
+function Pantry({ pantryInput, setPantryInput, addPantry, deletePantry, pantryFiltered, search, setSearch, identifyImage, pantryRecipe, loading }) {
+  return <section className="grid gap-5 lg:grid-cols-[.85fr_1.15fr]"><div className="glass rounded-[2.2rem] p-5 shadow-soft"><h2 className="mb-4 flex items-center gap-2 text-2xl font-black"><Refrigerator className="text-sage" />食材庫</h2><div className="space-y-3"><input className="w-full rounded-2xl bg-white p-3 outline-none" placeholder="食材名稱，例如雞蛋" value={pantryInput.name} onChange={(e) => setPantryInput({ ...pantryInput, name: e.target.value })} /><input className="w-full rounded-2xl bg-white p-3 outline-none" placeholder="數量，例如6隻" value={pantryInput.qty} onChange={(e) => setPantryInput({ ...pantryInput, qty: e.target.value })} /><input className="w-full rounded-2xl bg-white p-3 outline-none" type="date" value={pantryInput.expiry} onChange={(e) => setPantryInput({ ...pantryInput, expiry: e.target.value })} /><select className="w-full rounded-2xl bg-white p-3 outline-none" value={pantryInput.category} onChange={(e) => setPantryInput({ ...pantryInput, category: e.target.value })}><option>蔬菜</option><option>肉類</option><option>蛋奶</option><option>主食</option><option>調味</option><option>其他</option></select><button onClick={addPantry} className="flex w-full items-center justify-center gap-2 rounded-2xl bg-ink p-3 font-black text-white"><Plus size={18} />新增食材</button><label className="flex cursor-pointer items-center justify-center gap-2 rounded-2xl bg-orange p-3 font-black text-white"><Camera size={18} />拍照／上載 AI 辨識<input type="file" accept="image/*" className="hidden" onChange={(e) => identifyImage(e.target.files?.[0])} /></label><button onClick={pantryRecipe} disabled={loading} className="flex w-full items-center justify-center gap-2 rounded-2xl bg-sage p-3 font-black text-white"><Sparkles size={18} />我現有材料可以整咩？</button></div></div><div className="glass rounded-[2.2rem] p-5 shadow-soft"><div className="mb-4 flex items-center rounded-2xl bg-white px-3"><Search size={18} className="text-stone-400" /><input value={search} onChange={(e) => setSearch(e.target.value)} className="w-full bg-transparent p-3 outline-none" placeholder="搜尋食材或分類" /></div><div className="grid gap-3 md:grid-cols-2">{pantryFiltered.map((item) => <div key={item.id} className="card-hover rounded-3xl bg-white/85 p-4"><div className="flex justify-between"><div><h3 className="font-black">{item.name}</h3><p className="text-sm text-stone-500">{item.qty || '未填數量'} · {item.category}</p><p className="mt-2 text-xs text-stone-400">到期日：{item.expiry || '未設定'}</p></div><button onClick={() => deletePantry(item.id)} className="grid h-10 w-10 place-items-center rounded-full bg-red-50 text-red-500"><Trash2 size={17} /></button></div></div>)}</div></div></section>
+}
+
+function SettingsPage({ state, update, updateSettings }) {
+  return <section className="grid gap-5 lg:grid-cols-[.9fr_1.1fr]"><div className="glass rounded-[2.2rem] p-5 shadow-soft"><h2 className="mb-4 flex items-center gap-2 text-2xl font-black"><Settings className="text-orange" />設定</h2><label className="text-sm font-black">OpenAI API Key</label><input type="password" value={state.apiKey} onChange={(e) => update({ apiKey: e.target.value })} className="mt-2 w-full rounded-2xl bg-white p-3 outline-none" placeholder="sk-...（只儲存在本機 localStorage）" /><p className="mt-2 text-xs text-stone-500">正式上線建議改為後端 API，避免前端暴露 API Key。</p><label className="mt-5 block text-sm font-black">AI 圖片風格</label><select className="mt-2 w-full rounded-2xl bg-white p-3 outline-none" value={state.settings.imageStyle} onChange={(e) => updateSettings({ imageStyle: e.target.value })}>{imageStyles.map((x) => <option key={x}>{x}</option>)}</select></div><div className="space-y-5"><SettingChips title="飲食偏好" items={diets} values={state.settings.diets} onChange={(diets) => updateSettings({ diets })} /><SettingChips title="過敏設定" items={allergies} values={state.settings.allergies} onChange={(allergies) => updateSettings({ allergies })} /><SettingChips title="健康目標" items={goals} values={state.settings.goals} onChange={(goals) => updateSettings({ goals })} /><SettingChips title="個人口味" items={tastes} values={state.settings.tastes} onChange={(tastes) => updateSettings({ tastes })} /><ProFeatures history={state.history} /></div></section>
+}
+
+function SettingChips({ title, items, values, onChange }) { const toggle = (x) => values.includes(x) ? onChange(values.filter((v) => v !== x)) : onChange([...values, x]); return <div className="glass rounded-[2rem] p-5 shadow-soft"><h3 className="mb-3 font-black">{title}</h3><div className="flex flex-wrap gap-2">{items.map((x) => <button key={x} onClick={() => toggle(x)} className={`rounded-full px-4 py-2 text-sm font-bold ${values.includes(x) ? 'bg-ink text-white' : 'bg-white text-stone-600'}`}>{x}</button>)}</div></div> }
+function ProFeatures({ history }) { return <div className="glass rounded-[2rem] p-5 shadow-soft"><h3 className="mb-3 flex items-center gap-2 font-black"><History className="text-orange" />AI 進階功能</h3><div className="grid gap-3 md:grid-cols-3"><Mini icon={<History />} title="Food History" sub={`已記錄 ${history.length} 餐`} /><Mini icon={<CalendarDays />} title="Weekly Meal Plan" sub="一星期餐單" /><Mini icon={<Refrigerator />} title="Smart Fridge" sub="到期提醒" /></div></div> }
+function Mini({ icon, title, sub }) { return <div className="rounded-3xl bg-white/80 p-4">{icon}<b className="mt-2 block">{title}</b><p className="text-sm text-stone-500">{sub}</p></div> }
+
+function BottomNav({ active, setActive }) {
+  const nav = [[Home, 'planner', '首頁'], [Sparkles, 'result', '建議'], [Apple, 'pantry', '食材'], [Settings, 'settings', '設定']]
+  return <nav className="fixed bottom-4 left-1/2 z-50 w-[calc(100%-2rem)] max-w-xl -translate-x-1/2 rounded-[2rem] bg-white/90 p-2 shadow-soft backdrop-blur"><div className="grid grid-cols-4 gap-1">{nav.map(([Icon, id, label]) => <button key={id} onClick={() => setActive(id)} className={`rounded-3xl py-3 text-xs font-black transition ${active === id ? 'bg-ink text-white' : 'text-stone-500'}`}><Icon className="mx-auto mb-1" size={20} />{label}</button>)}</div></nav>
+}
+
+export default App
